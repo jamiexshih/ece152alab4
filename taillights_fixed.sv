@@ -17,10 +17,7 @@ module ucsbece152a_taillights (
 
 wire [5:0] fsm_pattern;
 
-reg [5:0] lights_runlightsoff;
-reg [5:0] lights_runlightson;
-
-ucsbece152a_fsm fsm (
+ucsbece152a_fsmg fsm (
 
     .clk(clk),
     .rst_n(rst_n),
@@ -33,59 +30,39 @@ ucsbece152a_fsm fsm (
 
 );
 
-// =====================================
-// RUNLIGHTS OFF LOGIC
-// =====================================
+// OUTPUT LOGIC
 
 always @(*) begin
 
-    // default = FSM pattern
-    lights_runlightsoff = fsm_pattern;
+    // default
+    lights_o = fsm_pattern;
 
-    // BRAKE LOGIC
+    // BRAKES
     if (brake_i) begin
 
-        // both sides on
-        lights_runlightsoff = 6'b111111;
+        lights_o = 6'b111111;
 
-        // left turn overrides left brake side
-        if (left_i && !hazard_i)
-            lights_runlightsoff[5:3] = fsm_pattern[5:3];
+        // left sequence overrides left brake side
+        if (left_i)
+            lights_o[5:3] = fsm_pattern[5:3];
 
-        // right turn overrides right brake side
-        if (right_i && !hazard_i)
-            lights_runlightsoff[2:0] = fsm_pattern[2:0];
+        // right sequence overrides right brake side
+        if (right_i)
+            lights_o[2:0] = fsm_pattern[2:0];
+
     end
 
-    // RESET OVERRIDES EVERYTHING
+    // RUNLIGHTS
+    if (runlights_i) begin
+
+        lights_o = lights_o |
+                   (~lights_o & {6{clk_dimmer_i}});
+
+    end
+
+    // RESET
     if (!rst_n)
-        lights_runlightsoff = 6'b000000;
-
-end
-
-// =====================================
-// RUNLIGHTS ON LOGIC
-// =====================================
-
-always @(*) begin
-
-    // any OFF light becomes dimmed
-    lights_runlightson =
-        lights_runlightsoff |
-        (~lights_runlightsoff & {6{clk_dimmer_i}});
-
-end
-
-// =====================================
-// FINAL OUTPUT MUX
-// =====================================
-
-always @(*) begin
-
-    if (runlights_i)
-        lights_o = lights_runlightson;
-    else
-        lights_o = lights_runlightsoff;
+        lights_o = 6'b000000;
 
 end
 
