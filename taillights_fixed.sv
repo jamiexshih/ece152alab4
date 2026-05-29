@@ -11,13 +11,19 @@ module ucsbece152a_taillights (
     input brake_i,
     input runlights_i,
 
-    output reg [5:0] lights_o
+    output logic [5:0] lights_o
 
 );
 
-wire [5:0] fsm_pattern;
+logic [5:0] fsm_pattern;
 
-ucsbece152a_fsmg fsm (
+logic [5:0] lights_runlightsoff;
+logic [5:0] lights_runlightson;
+
+
+// FSM INSTANCE
+
+ucsbece152a_fsm fsm (
 
     .clk(clk),
     .rst_n(rst_n),
@@ -30,39 +36,70 @@ ucsbece152a_fsmg fsm (
 
 );
 
-// OUTPUT LOGIC
+// BASE LIGHTING LOGIC
 
-always @(*) begin
+always_comb begin
 
     // default
-    lights_o = fsm_pattern;
+    lights_runlightsoff = fsm_pattern;
 
-    // BRAKES
-    if (brake_i) begin
+    // RESET HAS HIGHEST PRIORITY
+    if (!rst_n) begin
 
-        lights_o = 6'b111111;
-
-        // left sequence overrides left brake side
-        if (left_i)
-            lights_o[5:3] = fsm_pattern[5:3];
-
-        // right sequence overrides right brake side
-        if (right_i)
-            lights_o[2:0] = fsm_pattern[2:0];
+        lights_runlightsoff = 6'b000000;
 
     end
 
-    // RUNLIGHTS
-    if (runlights_i) begin
+    // BRAKE LOGIC
+    else if (brake_i) begin
 
-        lights_o = lights_o |
-                   (~lights_o & {6{clk_dimmer_i}});
+        // start with all ON
+        lights_runlightsoff = 6'b111111;
+
+        // LEFT TURN overrides LEFT brake side
+        if (left_i && !hazard_i)
+            lights_runlightsoff[5:3] = fsm_pattern[5:3];
+
+        // RIGHT TURN overrides RIGHT brake side
+        if (right_i && !hazard_i)
+            lights_runlightsoff[2:0] = fsm_pattern[2:0];
 
     end
 
-    // RESET
+end
+
+
+// RUNLIGHT DIMMING LOGIC
+
+always_comb begin
+
+    // default = same as normal lights
+    lights_runlightson = lights_runlightsoff;
+
+    // dim ONLY the OFF LEDs
+    if (clk_dimmer_i) begin
+
+        lights_runlightson =
+            lights_runlightsoff |
+            (~lights_runlightsoff);
+
+    end
+
+end
+
+
+// FINAL OUTPUT
+
+always_comb begin
+
     if (!rst_n)
         lights_o = 6'b000000;
+
+    else if (runlights_i)
+        lights_o = lights_runlightson;
+
+    else
+        lights_o = lights_runlightsoff;
 
 end
 
