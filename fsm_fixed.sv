@@ -1,7 +1,13 @@
-```verilog
+/*
+* Copyright (c) 2023, University of California; Santa Barbara
+* Distribution prohibited. All rights reserved.
+*
+* File: ucsbece152a_fsm.sv
+* Description: Starter code for fsm.
+*/
 import taillights_pkg::*;
 
-module ucsbece152a_fsm (
+module ucsbece152a_fsmg (
 
     input clk,
     input rst_n,
@@ -10,21 +16,17 @@ module ucsbece152a_fsm (
     input right_i,
     input hazard_i,
 
-    output [5:0] pattern_o,
+    output reg [5:0] pattern_o,
     output state_t state_o
 
 );
-
-reg [5:0] pattern_o;
 
 state_t state_d;
 state_t state_q;
 
 assign state_o = state_q;
 
-// =====================================
 // NEXT STATE LOGIC
-// =====================================
 
 always @(*) begin
 
@@ -50,8 +52,6 @@ always @(*) begin
             S000_000: state_d = S001_000;
             S001_000: state_d = S011_000;
             S011_000: state_d = S111_000;
-
-            // FIXED:
             S111_000: state_d = S000_000;
 
             default:  state_d = S000_000;
@@ -68,8 +68,6 @@ always @(*) begin
             S000_000: state_d = S000_100;
             S000_100: state_d = S000_110;
             S000_110: state_d = S000_111;
-
-            // FIXED:
             S000_111: state_d = S000_000;
 
             default:  state_d = S000_000;
@@ -86,9 +84,7 @@ always @(*) begin
 
 end
 
-// =====================================
 // STATE REGISTER
-// =====================================
 
 always @(posedge clk or negedge rst_n) begin
 
@@ -99,9 +95,7 @@ always @(posedge clk or negedge rst_n) begin
 
 end
 
-// =====================================
 // OUTPUT DECODER
-// =====================================
 
 always @(*) begin
 
@@ -129,5 +123,3 @@ always @(*) begin
 end
 
 endmodule
-```
-
